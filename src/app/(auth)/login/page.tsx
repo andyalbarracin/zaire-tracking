@@ -111,7 +111,8 @@ export default function LoginPage() {
       password: data.password,
     });
     if (error) {
-      setAuthError("Email o contraseña incorrectos");
+      // Mostrar el error REAL de Supabase para debug
+      setAuthError(`[${error.status}] ${error.message}`);
       return;
     }
     router.push("/");
