@@ -1,10 +1,6 @@
-// layout.tsx — src/app/(auth)/layout.tsx — 2026-05-19
-// Layout para páginas de autenticación (sin sidebar)
+// layout.tsx — src/app/(auth)/layout.tsx — 2026-05-20
+// Layout para páginas de autenticación — sin wrapper, full screen
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-sas-navy flex items-center justify-center p-4">
-      {children}
-    </div>
-  );
+  return <>{children}</>;
 }
