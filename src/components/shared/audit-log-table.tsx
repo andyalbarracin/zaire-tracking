@@ -1,0 +1,173 @@
+"use client";
+// audit-log-table.tsx — src/components/shared/audit-log-table.tsx — 2026-05-19
+// Tabla de auditoría con filtros, búsqueda y expansión de datos JSON
+
+import { useState, useMemo } from "react";
+import { Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatDateTime } from "@/lib/utils";
+import { AUDIT_ACTION_LABELS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import type { AuditLog, AuditAction } from "@/lib/types/database";
+
+const ACTION_COLORS: Record<AuditAction, string> = {
+  create: "bg-green-100 text-green-700",
+  update: "bg-blue-100 text-blue-700",
+  delete: "bg-red-100 text-red-700",
+  status_change: "bg-violet-100 text-violet-700",
+};
+
+const ENTITY_LABELS: Record<string, string> = {
+  work_order: "Orden de Trabajo",
+  client: "Cliente",
+  product: "Producto",
+  work_order_item: "Ítem",
+};
+
+interface AuditLogTableProps {
+  logs: AuditLog[];
+}
+
+export function AuditLogTable({ logs }: AuditLogTableProps) {
+  const [search, setSearch] = useState("");
+  const [entityFilter, setEntityFilter] = useState("all");
+  const [actionFilter, setActionFilter] = useState("all");
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const filtered = useMemo(() => {
+    return logs.filter((log) => {
+      if (entityFilter !== "all" && log.entity_type !== entityFilter) return false;
+      if (actionFilter !== "all" && log.action !== actionFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        return (
+          (log.description ?? "").toLowerCase().includes(q) ||
+          (log.user_name ?? "").toLowerCase().includes(q) ||
+          log.entity_type.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [logs, search, entityFilter, actionFilter]);
+
+  function toggleRow(id: string) {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  return (
+    <div className="sas-card">
+      {/* Filters */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-(--sas-border) flex-wrap">
+        <div className="relative w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-(--sas-text-muted)" />
+          <Input placeholder="Buscar en historial..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
+        </div>
+        <Select value={entityFilter} onValueChange={(v) => setEntityFilter(v ?? "all")}>
+          <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Entidad" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las entidades</SelectItem>
+            {Object.entries(ENTITY_LABELS).map(([val, label]) => (
+              <SelectItem key={val} value={val}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={actionFilter} onValueChange={(v) => setActionFilter(v ?? "all")}>
+          <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Acción" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las acciones</SelectItem>
+            {Object.entries(AUDIT_ACTION_LABELS).map(([val, label]) => (
+              <SelectItem key={val} value={val}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="ml-auto text-sm text-(--sas-text-muted)">{filtered.length} registros</span>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b border-(--sas-border)">
+            <tr>
+              {["Fecha y hora", "Usuario", "Acción", "Entidad", "Descripción", ""].map((h) => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-(--sas-text-muted) uppercase tracking-wide whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-(--sas-border)">
+            {filtered.map((log) => {
+              const hasData = log.old_data || log.new_data;
+              const expanded = expandedRows.has(log.id);
+              return (
+                <>
+                  <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3 whitespace-nowrap text-(--sas-text-muted) text-xs">
+                      {formatDateTime(log.created_at)}
+                    </td>
+                    <td className="px-4 py-3 text-sm">{log.user_name ?? "Sistema"}</td>
+                    <td className="px-4 py-3">
+                      <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium", ACTION_COLORS[log.action])}>
+                        {AUDIT_ACTION_LABELS[log.action]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-(--sas-text-muted)">
+                      {ENTITY_LABELS[log.entity_type] ?? log.entity_type}
+                    </td>
+                    <td className="px-4 py-3 max-w-sm truncate">{log.description ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      {hasData && (
+                        <button
+                          type="button"
+                          onClick={() => toggleRow(log.id)}
+                          className="text-(--sas-text-muted) hover:text-(--sas-text)"
+                        >
+                          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  {expanded && (
+                    <tr key={`${log.id}-detail`} className="bg-slate-50">
+                      <td colSpan={6} className="px-4 py-3">
+                        <div className="grid grid-cols-2 gap-4">
+                          {log.old_data && (
+                            <div>
+                              <p className="text-xs font-semibold text-(--sas-text-muted) mb-1 uppercase">Datos anteriores</p>
+                              <pre className="text-xs bg-red-50 border border-red-100 rounded p-2 overflow-x-auto max-h-32">
+                                {JSON.stringify(log.old_data, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                          {log.new_data && (
+                            <div>
+                              <p className="text-xs font-semibold text-(--sas-text-muted) mb-1 uppercase">Datos nuevos</p>
+                              <pre className="text-xs bg-green-50 border border-green-100 rounded p-2 overflow-x-auto max-h-32">
+                                {JSON.stringify(log.new_data, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })}
+            {!filtered.length && (
+              <tr>
+                <td colSpan={6} className="px-4 py-12 text-center text-(--sas-text-muted)">
+                  Sin registros de auditoría
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
