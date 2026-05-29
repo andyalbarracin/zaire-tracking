@@ -1,4 +1,4 @@
-// page.tsx — src/app/(dashboard)/clientes/page.tsx — 2026-05-19
+// page.tsx — src/app/(dashboard)/clientes/page.tsx — 2026-05-27
 // Lista de clientes con búsqueda y acciones CRUD
 
 import { createClient } from "@/lib/supabase/server";
@@ -10,7 +10,7 @@ export default async function ClientesPage() {
   const supabase = await createClient();
   const { data: clients } = await supabase
     .from("clients")
-    .select("id, business_name, tax_id, contact_name, email, phone, city, is_active, created_at, updated_at, address, notes")
+    .select("id, business_name, client_code, tax_id, contact_name, email, phone, city, is_active, created_at, updated_at, address, notes")
     .order("business_name");
 
   return (
@@ -21,7 +21,7 @@ export default async function ClientesPage() {
           {clients?.length ?? 0} clientes registrados
         </p>
       </div>
-      <ClientsTable initialClients={clients ?? []} />
+      <ClientsTable initialClients={(clients ?? []) as never} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// page.tsx — src/app/(dashboard)/page.tsx — 2026-05-19
+// page.tsx — src/app/(dashboard)/page.tsx — 2026-05-27
 // Dashboard principal con bento grid: métricas, órdenes recientes, vencimientos
 
 import { createClient } from "@/lib/supabase/server";
@@ -6,7 +6,7 @@ import { ClipboardList, Truck, Receipt, Plus, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { OrderStatusBadge, OrderTypeBadge } from "@/components/orders/order-status-badge";
 import { formatDate, formatDateTime, isOverdue, getDueDaysLabel } from "@/lib/utils";
-import { ORDER_STATUS_LABELS } from "@/lib/constants";
+import { ORDER_STATUS_LABELS, ORDER_STATUSES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { OrderStatus, OrderType, AuditAction } from "@/lib/types/database";
 
@@ -40,14 +40,17 @@ export default async function DashboardPage() {
     { count: pendingInvoiceCount },
     { count: todayCount },
   ] = await Promise.all([
-    supabase.from("work_orders").select("*", { count: "exact", head: true }).is("deleted_at", null).not("status", "in", '("cerrada","cancelada")'),
-    supabase.from("work_orders").select("*", { count: "exact", head: true }).is("deleted_at", null).eq("status", "lista_para_entrega"),
-    supabase.from("work_orders").select("*", { count: "exact", head: true }).is("deleted_at", null).eq("is_invoiced", false).eq("is_delivered", true),
+    supabase.from("work_orders").select("*", { count: "exact", head: true }).is("deleted_at", null).not("status", "in", '("facturada","cancelada")'),
+    supabase.from("work_orders").select("*", { count: "exact", head: true }).is("deleted_at", null).eq("status", "lista_para_entregar"),
+    supabase.from("work_orders").select("*", { count: "exact", head: true }).is("deleted_at", null).eq("status", "remitido"),
     supabase.from("work_orders").select("*", { count: "exact", head: true }).is("deleted_at", null).gte("created_at", today.toISOString()),
   ]);
 
-  // Status counts
-  const statusesToCount: OrderStatus[] = ["ingresada", "en_revision", "presupuestada", "aprobada", "en_reparacion", "lista_para_entrega", "entregada", "facturada"];
+  // Status counts — todos los estados del workflow actual
+  const statusesToCount: OrderStatus[] = ORDER_STATUSES
+    .filter((s) => s.value !== "cancelada")
+    .map((s) => s.value as OrderStatus);
+
   const statusCountResults = await Promise.all(
     statusesToCount.map(async (s) => {
       const { count } = await supabase.from("work_orders").select("*", { count: "exact", head: true }).is("deleted_at", null).eq("status", s);
@@ -63,7 +66,7 @@ export default async function DashboardPage() {
     supabase.from("work_orders")
       .select("id, order_number, order_type, status, date_due, clients(business_name)")
       .is("deleted_at", null).not("date_due", "is", null)
-      .not("status", "in", '("cerrada","cancelada","entregada","facturada")')
+      .not("status", "in", '("facturada","cancelada","remitido")')
       .order("date_due", { ascending: true }).limit(6),
     supabase.from("audit_logs")
       .select("id, action, description, user_name, entity_type, created_at")
@@ -76,7 +79,7 @@ export default async function DashboardPage() {
 
   const stats = [
     { label: "OTs Activas", value: activeCount ?? 0, icon: ClipboardList, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Pendientes de Entrega", value: pendingDeliveryCount ?? 0, icon: Truck, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Lista para Entregar", value: pendingDeliveryCount ?? 0, icon: Truck, color: "text-amber-600", bg: "bg-amber-50" },
     { label: "Pendientes de Facturación", value: pendingInvoiceCount ?? 0, icon: Receipt, color: "text-red-600", bg: "bg-red-50" },
     { label: "Ingresadas Hoy", value: todayCount ?? 0, icon: Plus, color: "text-green-600", bg: "bg-green-50" },
   ];
@@ -128,7 +131,7 @@ export default async function DashboardPage() {
                       <Link href={`/ordenes/${order.id}`} className="font-mono text-sm font-medium text-sas-blue hover:underline">{order.order_number}</Link>
                     </td>
                     <td className="px-3 py-3"><OrderTypeBadge type={order.order_type as OrderType} /></td>
-                    <td className="px-3 py-3 text-(--sas-text-muted) max-w-[160px] truncate">
+                    <td className="px-3 py-3 text-(--sas-text-muted) max-w-40 truncate">
                       {order.clients?.business_name ?? "—"}
                     </td>
                     <td className="px-3 py-3"><OrderStatusBadge status={order.status as OrderStatus} /></td>

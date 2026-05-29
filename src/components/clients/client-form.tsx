@@ -1,5 +1,5 @@
 "use client";
-// client-form.tsx — src/components/clients/client-form.tsx — 2026-05-19
+// client-form.tsx — src/components/clients/client-form.tsx — 2026-05-27
 // Modal para crear y editar clientes, react-hook-form + zod + Supabase
 
 import { useEffect } from "react";
@@ -24,6 +24,7 @@ import type { Client } from "@/lib/types/database";
 
 const schema = z.object({
   business_name: z.string().min(1, "La razón social es obligatoria"),
+  client_code: z.string().optional(),
   tax_id: z.string().optional(),
   contact_name: z.string().optional(),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
@@ -64,6 +65,7 @@ export function ClientForm({ open, onOpenChange, client, onSaved }: ClientFormPr
         client
           ? {
               business_name: client.business_name,
+              client_code: client.client_code ?? "",
               tax_id: client.tax_id ?? "",
               contact_name: client.contact_name ?? "",
               email: client.email ?? "",
@@ -82,6 +84,7 @@ export function ClientForm({ open, onOpenChange, client, onSaved }: ClientFormPr
     const supabase = createClient();
     const payload = {
       business_name: data.business_name,
+      client_code: data.client_code || null,
       tax_id: data.tax_id || null,
       contact_name: data.contact_name || null,
       email: data.email || null,
@@ -118,33 +121,37 @@ export function ClientForm({ open, onOpenChange, client, onSaved }: ClientFormPr
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="business_name">Razón Social *</Label>
-            <Input id="business_name" {...register("business_name")} placeholder="Empresa S.A." />
-            {errors.business_name && <p className="text-xs text-red-600">{errors.business_name.message}</p>}
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5 col-span-2">
+              <Label htmlFor="business_name">Razón Social *</Label>
+              <Input id="business_name" {...register("business_name")} placeholder="Empresa S.A." />
+              {errors.business_name && <p className="text-xs text-red-600">{errors.business_name.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="client_code">Código de Cliente</Label>
+              <Input id="client_code" {...register("client_code")} placeholder="Ej: C-0001" />
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="tax_id">CUIT</Label>
               <Input id="tax_id" {...register("tax_id")} placeholder="30-12345678-9" />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="contact_name">Contacto</Label>
-              <Input id="contact_name" {...register("contact_name")} placeholder="Nombre y apellido" />
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register("email")} placeholder="contacto@empresa.com" />
-              {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
+              <Label htmlFor="contact_name">Contacto</Label>
+              <Input id="contact_name" {...register("contact_name")} placeholder="Nombre y apellido" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="phone">Teléfono</Label>
               <Input id="phone" {...register("phone")} placeholder="+54 11 ..." />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" {...register("email")} placeholder="contacto@empresa.com" />
+            {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

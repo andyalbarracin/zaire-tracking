@@ -160,7 +160,7 @@ export function ProductsTable({ initialProducts }: ProductsTableProps) {
           </div>
           <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v ?? "all")}>
             <SelectTrigger className="h-9 w-48">
-              <SelectValue placeholder="Categoría" />
+              <SelectValue>{categoryFilter === "all" ? "Todas las categorías" : PRODUCT_CATEGORY_LABELS[categoryFilter as ProductCategory] ?? categoryFilter}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las categorías</SelectItem>

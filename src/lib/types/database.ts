@@ -1,16 +1,15 @@
-// database.ts — src/lib/types/database.ts — 2026-05-19
+// database.ts — src/lib/types/database.ts — 2026-05-27
 // Tipos TypeScript para todas las tablas de Supabase / SAS Trace
 
 export type OrderStatus =
   | "ingresada"
   | "en_revision"
-  | "presupuestada"
+  | "cotizada"
   | "aprobada"
   | "en_reparacion"
-  | "lista_para_entrega"
-  | "entregada"
+  | "lista_para_entregar"
+  | "remitido"
   | "facturada"
-  | "cerrada"
   | "cancelada";
 
 export type OrderType = "OT" | "OTS";
@@ -24,6 +23,16 @@ export type ProductCategory =
   | "spare_part"
   | "otro";
 export type AuditAction = "create" | "update" | "delete" | "status_change";
+
+export interface Branch {
+  id: string;
+  name: string;
+  code_ot: string;
+  code_ots: string;
+  digits_ot: number;
+  digits_ots: number;
+  is_active: boolean;
+}
 
 export interface Profile {
   id: string;
@@ -46,6 +55,7 @@ export interface Client {
   city: string | null;
   notes: string | null;
   is_active: boolean;
+  client_code: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -72,6 +82,7 @@ export interface WorkOrder {
   order_number: string;
   order_type: OrderType;
   client_id: string | null;
+  branch_id: string;
   date_in: string;
   date_due: string | null;
   status: OrderStatus;
@@ -79,6 +90,8 @@ export interface WorkOrder {
   subtotal: number;
   tax_amount: number;
   total: number;
+  requiere_compra: string | null;
+  // Deprecated at order level — now computed from items
   is_remitted: boolean;
   is_delivered: boolean;
   is_invoiced: boolean;
@@ -105,11 +118,28 @@ export interface WorkOrderItem {
   additional_observation: string | null;
   unit_price: number;
   total_price: number;
+  unit_price_ars: number;
+  total_price_ars: number;
   repair_required: boolean;
   diagnosis: string | null;
   work_performed: string | null;
   status: ItemStatus;
   notes: string | null;
+  // Campos técnicos del sello
+  medida: string | null;
+  unidad_medida: "MM" | "PULG" | null;
+  marca: string | null;
+  materiales_caras: string | null;
+  materiales_orings: string | null;
+  origen_abastecimiento: string | null;
+  // Estados por ítem (semáforo)
+  is_quoted: boolean;
+  is_remitted: boolean;
+  qty_remitted: number;
+  is_delivered: boolean;
+  qty_delivered: number;
+  is_invoiced: boolean;
+  qty_invoiced: number;
   created_at: string;
   updated_at: string;
   // Joins
@@ -145,6 +175,11 @@ export interface AuditLog {
 export type Database = {
   public: {
     Tables: {
+      branches: {
+        Row: Branch;
+        Insert: Omit<Branch, "id">;
+        Update: Partial<Omit<Branch, "id">>;
+      };
       profiles: {
         Row: Profile;
         Insert: Omit<Profile, "created_at" | "updated_at">;
@@ -183,7 +218,7 @@ export type Database = {
     };
     Functions: {
       generate_order_number: {
-        Args: { p_order_type: string };
+        Args: { p_order_type: string; p_branch_id: string };
         Returns: string;
       };
     };

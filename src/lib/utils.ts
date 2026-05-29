@@ -1,5 +1,5 @@
-// utils.ts — src/lib/utils.ts — 2026-05-19
-// Helpers generales: formato de moneda, fechas, cn
+// utils.ts — src/lib/utils.ts — 2026-05-27
+// Helpers generales: formato de moneda, fechas, cn, semáforo
 
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -55,4 +55,22 @@ export function getDueDaysLabel(date_due: string | null): string {
   if (diffDays === 0) return "Vence hoy";
   if (diffDays === 1) return "Vence mañana";
   return `Vence en ${diffDays} días`;
+}
+
+export type TrafficLight = "green" | "yellow" | "red";
+
+/**
+ * Calcula el color del semáforo para un campo booleano en una lista de ítems.
+ * Verde = todos completados, Amarillo = algunos, Rojo = ninguno.
+ */
+export function calculateTrafficLight(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  items: any[],
+  field: string
+): TrafficLight {
+  if (!items || items.length === 0) return "red";
+  const completed = items.filter((item) => item[field] === true).length;
+  if (completed === items.length) return "green";
+  if (completed > 0) return "yellow";
+  return "red";
 }

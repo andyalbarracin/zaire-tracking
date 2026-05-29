@@ -12,8 +12,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SAS Trace — Sistema de Trazabilidad",
-  description: "Gestión y trazabilidad de órdenes de trabajo — SAS Supplier",
+  title: "Zaire Trace — Sistema de Trazabilidad",
+  description: "Gestión y trazabilidad de órdenes de trabajo",
 };
 
 export default function RootLayout({

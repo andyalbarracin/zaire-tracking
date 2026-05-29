@@ -1,5 +1,5 @@
 "use client";
-// clients-table.tsx — src/components/clients/clients-table.tsx — 2026-05-19
+// clients-table.tsx — src/components/clients/clients-table.tsx — 2026-05-27
 // Tabla de clientes con TanStack Table, búsqueda, modal crear/editar
 
 import { useState, useMemo } from "react";
@@ -33,6 +33,13 @@ export function ClientsTable({ initialClients }: ClientsTableProps) {
 
   const columns = useMemo<ColumnDef<Client>[]>(
     () => [
+      {
+        accessorKey: "client_code",
+        header: "Código",
+        cell: ({ getValue }) => (
+          <span className="font-mono text-xs text-(--sas-text-muted)">{(getValue() as string) ?? "—"}</span>
+        ),
+      },
       {
         accessorKey: "business_name",
         header: ({ column }) => (

@@ -11,11 +11,13 @@ import {
   Users,
   Package,
   History,
+  BarChart3,
   Settings,
   Activity,
   ChevronLeft,
   ChevronRight,
   LogOut,
+  LifeBuoy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -35,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/productos", label: "Productos", icon: Package },
   { href: "/historial", label: "Historial", icon: History },
+  { href: "/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/configuracion", label: "Configuración", icon: Settings, adminOnly: true },
 ];
 
@@ -71,7 +74,7 @@ export function Sidebar({ profile }: SidebarProps) {
         <Activity className="w-7 h-7 text-sas-light shrink-0" />
         {!collapsed && (
           <div>
-            <span className="font-bold text-lg tracking-tight">SAS Trace</span>
+            <span className="font-bold text-lg tracking-tight">Zaire Trace</span>
             <p className="text-[10px] text-sas-light opacity-70 leading-tight">
               Sistema de Trazabilidad
             </p>
@@ -117,6 +120,24 @@ export function Sidebar({ profile }: SidebarProps) {
           ))}
         </ul>
       </nav>
+
+      {/* Ayuda — separado del nav principal */}
+      <div className="px-2 py-2 border-t border-sas-navy-mid/50">
+        <Link
+          href="/ayuda"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-150",
+            isActive("/ayuda")
+              ? "bg-sas-navy-mid border-l-2 border-sas-blue text-white"
+              : "text-white/70 hover:text-white hover:bg-sas-navy-mid/60",
+            collapsed && "justify-center px-2"
+          )}
+          title={collapsed ? "Ayuda" : undefined}
+        >
+          <LifeBuoy className="w-5 h-5 shrink-0" />
+          {!collapsed && <span className="truncate">Ayuda</span>}
+        </Link>
+      </div>
 
       {/* User footer */}
       <div className="border-t border-sas-navy-mid p-3">

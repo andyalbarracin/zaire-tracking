@@ -1,12 +1,12 @@
 // page.tsx — src/app/(auth)/terminos/page.tsx — 2026-05-20
-// Página de Términos y Condiciones y Política de Privacidad de SAS Trace
+// Página de Términos y Condiciones y Política de Privacidad de Zaire Trace
 
 import Link from "next/link";
 import { Activity, ArrowLeft } from "lucide-react";
 
 export const metadata = {
-  title: "Términos y Condiciones — SAS Trace",
-  description: "Términos de uso y política de privacidad de SAS Trace",
+  title: "Términos y Condiciones — Zaire Trace",
+  description: "Términos de uso y política de privacidad de Zaire Trace",
 };
 
 export default function TerminosPage() {
@@ -17,7 +17,7 @@ export default function TerminosPage() {
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Activity className="w-5 h-5 text-white" />
-            <span className="text-white font-bold tracking-tight">SAS Trace</span>
+            <span className="text-white font-bold tracking-tight">Zaire Trace</span>
           </div>
           <Link
             href="/login"
@@ -40,7 +40,7 @@ export default function TerminosPage() {
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">1. Aceptación de los términos</h2>
               <p>
-                Al acceder y utilizar SAS Trace ("el Sistema"), usted acepta quedar vinculado por estos Términos y
+                Al acceder y utilizar Zaire Trace ("el Sistema"), usted acepta quedar vinculado por estos Términos y
                 Condiciones de Uso. Si no está de acuerdo con alguna parte de estos términos, no podrá acceder al
                 Sistema. El uso continuo del Sistema después de la publicación de cambios constituye aceptación de
                 los nuevos términos.
@@ -50,8 +50,8 @@ export default function TerminosPage() {
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">2. Descripción del servicio</h2>
               <p>
-                SAS Trace es un sistema web de gestión y trazabilidad de órdenes de trabajo desarrollado
-                exclusivamente para uso interno de <strong>SAS Supplier S.A.</strong> y sus usuarios autorizados.
+                Zaire Trace es un sistema web de gestión y trazabilidad de órdenes de trabajo desarrollado
+                exclusivamente para uso interno de <strong>Empresa Demo S.A.</strong> y sus usuarios autorizados.
                 El Sistema permite registrar, numerar, seguir y auditar órdenes de trabajo (OT y OTS) conforme
                 a los requerimientos del sistema de gestión de calidad ISO 9001:2015.
               </p>
@@ -61,7 +61,7 @@ export default function TerminosPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-2">3. Acceso y cuentas de usuario</h2>
               <p>
                 El acceso al Sistema está restringido a empleados y personas debidamente autorizadas por
-                SAS Supplier S.A. Cada usuario es responsable de:
+                Empresa Demo S.A. Cada usuario es responsable de:
               </p>
               <ul className="list-disc pl-5 space-y-1 mt-2">
                 <li>Mantener la confidencialidad de sus credenciales de acceso</li>
@@ -70,7 +70,7 @@ export default function TerminosPage() {
                 <li>No compartir sus credenciales con terceros</li>
               </ul>
               <p className="mt-3">
-                SAS Supplier S.A. se reserva el derecho de desactivar cuentas de usuario que incumplan estos
+                Empresa Demo S.A. se reserva el derecho de desactivar cuentas de usuario que incumplan estos
                 términos, sin previo aviso.
               </p>
             </div>
@@ -79,7 +79,7 @@ export default function TerminosPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-2">4. Uso permitido</h2>
               <p>El Sistema puede utilizarse únicamente para:</p>
               <ul className="list-disc pl-5 space-y-1 mt-2">
-                <li>Registrar y gestionar órdenes de trabajo relacionadas con las actividades de SAS Supplier S.A.</li>
+                <li>Registrar y gestionar órdenes de trabajo relacionadas con las actividades de Empresa Demo S.A.</li>
                 <li>Consultar el historial de órdenes y estados</li>
                 <li>Generar documentación oficial (remitos, órdenes de trabajo, reportes)</li>
                 <li>Administrar el catálogo de clientes y productos de la empresa</li>
@@ -95,7 +95,7 @@ export default function TerminosPage() {
                 <li>Modificar, copiar o distribuir el código fuente del Sistema</li>
                 <li>Introducir virus, malware u otro código malicioso</li>
                 <li>Realizar ingeniería inversa sobre el Sistema</li>
-                <li>Exportar datos del Sistema para uso fuera de SAS Supplier S.A. sin autorización expresa</li>
+                <li>Exportar datos del Sistema para uso fuera de Empresa Demo S.A. sin autorización expresa</li>
               </ul>
             </div>
 
@@ -103,7 +103,7 @@ export default function TerminosPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-2">6. Propiedad intelectual</h2>
               <p>
                 El Sistema, incluyendo su código fuente, diseño, estructura de base de datos y documentación,
-                es propiedad de SAS Supplier S.A. Todos los derechos reservados. El Software fue desarrollado
+                es propiedad de Empresa Demo S.A. Todos los derechos reservados. El Software fue desarrollado
                 a medida para uso interno exclusivo.
               </p>
             </div>
@@ -112,7 +112,7 @@ export default function TerminosPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-2">7. Responsabilidad por datos</h2>
               <p>
                 Los usuarios son responsables de la exactitud y veracidad de la información que ingresan al Sistema.
-                SAS Supplier S.A. no se responsabiliza por errores derivados de datos incorrectos ingresados por
+                Empresa Demo S.A. no se responsabiliza por errores derivados de datos incorrectos ingresados por
                 los usuarios. El Sistema proporciona trazabilidad pero no sustituye el juicio profesional del
                 personal autorizado.
               </p>
@@ -121,7 +121,7 @@ export default function TerminosPage() {
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">8. Disponibilidad del servicio</h2>
               <p>
-                SAS Supplier S.A. realizará sus mejores esfuerzos para mantener el Sistema disponible de forma
+                Empresa Demo S.A. realizará sus mejores esfuerzos para mantener el Sistema disponible de forma
                 continua, pero no garantiza disponibilidad ininterrumpida. Se realizarán mantenimientos
                 programados con previo aviso cuando sea posible.
               </p>
@@ -130,7 +130,7 @@ export default function TerminosPage() {
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">9. Modificaciones</h2>
               <p>
-                SAS Supplier S.A. se reserva el derecho de modificar estos Términos en cualquier momento.
+                Empresa Demo S.A. se reserva el derecho de modificar estos Términos en cualquier momento.
                 Los cambios serán notificados a los usuarios con al menos 7 días de anticipación mediante
                 comunicación interna.
               </p>
@@ -155,10 +155,10 @@ export default function TerminosPage() {
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">1. Responsable del tratamiento</h2>
               <p>
-                <strong>SAS Supplier S.A.</strong><br />
-                CUIT: 30-71234567-8<br />
-                Av. Constitución 1234, Parque Industrial, Buenos Aires, Argentina<br />
-                Email: info@sassupplier.com.ar
+                <strong>Empresa Demo S.A.</strong><br />
+                CUIT: 30-00000000-0<br />
+                Dirección 1234, Buenos Aires, Argentina<br />
+                Email: demo@empresa.com
               </p>
             </div>
 
@@ -177,7 +177,7 @@ export default function TerminosPage() {
               <p>Los datos se utilizan exclusivamente para:</p>
               <ul className="list-disc pl-5 space-y-1 mt-2">
                 <li>Autenticar y autorizar el acceso al Sistema</li>
-                <li>Gestionar las operaciones de SAS Supplier S.A.</li>
+                <li>Gestionar las operaciones de Empresa Demo S.A.</li>
                 <li>Cumplir con los requerimientos de trazabilidad ISO 9001:2015</li>
                 <li>Auditoría interna y detección de accesos no autorizados</li>
               </ul>
@@ -205,7 +205,7 @@ export default function TerminosPage() {
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">6. No compartimos datos con terceros</h2>
               <p>
-                SAS Supplier S.A. no vende, alquila ni comparte datos personales con terceros, excepto cuando
+                Empresa Demo S.A. no vende, alquila ni comparte datos personales con terceros, excepto cuando
                 sea requerido por ley o autoridad competente, o cuando sea necesario para el funcionamiento
                 técnico del Sistema (proveedores de infraestructura bajo acuerdos de confidencialidad).
               </p>
@@ -216,7 +216,7 @@ export default function TerminosPage() {
               <p>
                 En cumplimiento de la Ley 25.326 de Protección de Datos Personales (Argentina), los usuarios
                 tienen derecho a acceder, rectificar y suprimir sus datos personales. Para ejercer estos
-                derechos, contactar a: <strong>info@sassupplier.com.ar</strong>
+                derechos, contactar a: <strong>demo@empresa.com</strong>
               </p>
               <p className="mt-2 text-sm text-gray-500">
                 La DIRECCIÓN NACIONAL DE PROTECCIÓN DE DATOS PERSONALES (Órgano de Control de la Ley N° 25.326)

@@ -1,8 +1,7 @@
-// page.tsx — src/app/(dashboard)/ordenes/[id]/page.tsx — 2026-05-19
+// page.tsx — src/app/(dashboard)/ordenes/[id]/page.tsx — 2026-05-27
 // Detalle de orden de trabajo: info, ítems, historial de estados, cambio de estado
 
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { OrderDetail } from "@/components/orders/order-detail";
 
@@ -27,10 +26,10 @@ export default async function OrderDetailPage({
     supabase
       .from("work_orders")
       .select(`
-        id, order_number, order_type, status, date_in, date_due,
-        currency, subtotal, tax_amount, total, is_remitted, is_delivered, is_invoiced,
-        general_notes, created_at, updated_at, created_by, client_id, deleted_at,
-        clients(id, business_name, tax_id, contact_name, email, phone, city)
+        id, order_number, order_type, status, date_in, date_due, branch_id,
+        currency, subtotal, tax_amount, total, general_notes, created_at,
+        updated_at, created_by, client_id, deleted_at,
+        clients(id, business_name, tax_id, contact_name, email, phone, city, client_code)
       `)
       .eq("id", id)
       .is("deleted_at", null)
@@ -39,8 +38,10 @@ export default async function OrderDetailPage({
       .from("work_order_items")
       .select(`
         id, item_number, quantity, product_id, custom_description, serial_number,
-        equipment_number, additional_observation, unit_price, total_price,
+        equipment_number, additional_observation, unit_price, total_price, unit_price_ars, total_price_ars,
         repair_required, diagnosis, work_performed, status, notes, created_at,
+        medida, unidad_medida, marca, materiales_caras, materiales_orings, origen_abastecimiento,
+        is_quoted, is_remitted, qty_remitted, is_delivered, qty_delivered, is_invoiced, qty_invoiced,
         products(id, code, name, brand, category)
       `)
       .eq("work_order_id", id)
@@ -66,7 +67,7 @@ export default async function OrderDetailPage({
   return (
     <OrderDetail
       order={order as never}
-      items={items ?? []}
+      items={(items ?? []) as never}
       history={history ?? []}
       clients={clients ?? []}
       products={products ?? []}

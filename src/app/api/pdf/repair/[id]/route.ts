@@ -1,10 +1,10 @@
-// route.ts — src/app/api/pdf/[id]/route.ts
-// Genera PDF RC 009-00 de una orden de trabajo
+// route.ts — src/app/api/pdf/repair/[id]/route.ts
+// Genera PDF RC 010-00 — Planilla de Reparación para órdenes OTS
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { OrderPdfDocument } from "@/lib/pdf/order-pdf-template";
+import { RepairPdfDocument } from "@/lib/pdf/repair-pdf-template";
 import React from "react";
 
 export async function GET(
@@ -22,16 +22,14 @@ export async function GET(
 
   const [{ data: orderRaw }, { data: itemsRaw }] = await Promise.all([
     sb.from("work_orders").select(`
-      id, order_number, order_type, status, date_in, date_due,
-      currency, subtotal, total, general_notes, created_at,
-      clients(business_name, tax_id, contact_name, email, phone, address, city, client_code)
+      id, order_number, order_type, date_in, currency,
+      clients(business_name, client_code)
     `).eq("id", id).single(),
     sb.from("work_order_items").select(`
       item_number, quantity, custom_description, serial_number,
-      equipment_number, additional_observation, unit_price, total_price,
-      is_remitted, is_invoiced, origen_abastecimiento,
-      products(code, name, brand)
-    `).eq("work_order_id", id).order("item_number"),
+      marca, materiales_caras, materiales_orings, repair_required,
+      products(code, name, brand, model)
+    `).eq("work_order_id", id).eq("repair_required", true).order("item_number"),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,16 +38,18 @@ export async function GET(
   const items = (itemsRaw ?? []) as any[];
 
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (order.order_type !== "OTS") return NextResponse.json({ error: "Solo disponible para órdenes OTS" }, { status: 400 });
+  if (!items.length) return NextResponse.json({ error: "No hay ítems con reparación requerida" }, { status: 400 });
 
   const buffer = await renderToBuffer(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    React.createElement(OrderPdfDocument, { order, items }) as any
+    React.createElement(RepairPdfDocument, { order, items }) as any
   );
 
   return new NextResponse(buffer as unknown as BodyInit, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${order.order_number}.pdf"`,
+      "Content-Disposition": `inline; filename="Reparacion_${order.order_number}.pdf"`,
     },
   });
 }

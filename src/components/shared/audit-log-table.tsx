@@ -3,7 +3,8 @@
 // Tabla de auditoría con filtros, búsqueda y expansión de datos JSON
 
 import { useState, useMemo } from "react";
-import { Search, ChevronDown, ChevronUp } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDateTime } from "@/lib/utils";
@@ -29,7 +30,15 @@ interface AuditLogTableProps {
   logs: AuditLog[];
 }
 
+const ENTITY_ROUTES: Record<string, string | null> = {
+  work_order: "/ordenes",
+  client: "/clientes",
+  product: "/productos",
+  work_order_item: null,
+};
+
 export function AuditLogTable({ logs }: AuditLogTableProps) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [entityFilter, setEntityFilter] = useState("all");
   const [actionFilter, setActionFilter] = useState("all");
@@ -69,7 +78,7 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
           <Input placeholder="Buscar en historial..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
         </div>
         <Select value={entityFilter} onValueChange={(v) => setEntityFilter(v ?? "all")}>
-          <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Entidad" /></SelectTrigger>
+          <SelectTrigger className="h-9 w-44"><SelectValue>{entityFilter === "all" ? "Todas las entidades" : ENTITY_LABELS[entityFilter] ?? entityFilter}</SelectValue></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las entidades</SelectItem>
             {Object.entries(ENTITY_LABELS).map(([val, label]) => (
@@ -78,7 +87,7 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
           </SelectContent>
         </Select>
         <Select value={actionFilter} onValueChange={(v) => setActionFilter(v ?? "all")}>
-          <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Acción" /></SelectTrigger>
+          <SelectTrigger className="h-9 w-44"><SelectValue>{actionFilter === "all" ? "Todas las acciones" : AUDIT_ACTION_LABELS[actionFilter as AuditAction] ?? actionFilter}</SelectValue></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas las acciones</SelectItem>
             {Object.entries(AUDIT_ACTION_LABELS).map(([val, label]) => (
@@ -103,9 +112,20 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
             {filtered.map((log) => {
               const hasData = log.old_data || log.new_data;
               const expanded = expandedRows.has(log.id);
+              const navRoute = ENTITY_ROUTES[log.entity_type];
+              const isNavigable = navRoute !== null && navRoute !== undefined && !!log.entity_id;
               return (
                 <>
-                  <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={log.id}
+                    onClick={() => {
+                      if (isNavigable) router.push(`${navRoute}/${log.entity_id}`);
+                    }}
+                    className={cn(
+                      "hover:bg-slate-50 transition-colors",
+                      isNavigable && "cursor-pointer"
+                    )}
+                  >
                     <td className="px-4 py-3 whitespace-nowrap text-(--sas-text-muted) text-xs">
                       {formatDateTime(log.created_at)}
                     </td>
@@ -120,15 +140,20 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
                     </td>
                     <td className="px-4 py-3 max-w-sm truncate">{log.description ?? "—"}</td>
                     <td className="px-4 py-3">
-                      {hasData && (
-                        <button
-                          type="button"
-                          onClick={() => toggleRow(log.id)}
-                          className="text-(--sas-text-muted) hover:text-(--sas-text)"
-                        >
-                          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </button>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        {isNavigable && (
+                          <ArrowRight className="w-3.5 h-3.5 text-(--sas-text-muted)" />
+                        )}
+                        {hasData && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleRow(log.id); }}
+                            className="text-(--sas-text-muted) hover:text-(--sas-text)"
+                          >
+                            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                   {expanded && (

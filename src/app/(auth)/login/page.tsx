@@ -162,8 +162,8 @@ export default function LoginPage() {
             <Activity className="w-6 h-6 text-white" />
           </div>
           <div>
-            <span className="text-white font-bold text-xl tracking-tight">SAS Trace</span>
-            <span className="block text-white/40 text-xs">SAS Supplier S.A.</span>
+            <span className="text-white font-bold text-xl tracking-tight">Zaire Trace</span>
+            <span className="block text-white/40 text-xs">Empresa Demo S.A.</span>
           </div>
         </div>
 
@@ -242,7 +242,7 @@ export default function LoginPage() {
         {/* Mobile logo */}
         <div className="lg:hidden flex items-center gap-2 p-6 border-b border-gray-200 bg-sas-navy">
           <Activity className="w-5 h-5 text-white" />
-          <span className="text-white font-bold">SAS Trace</span>
+          <span className="text-white font-bold">Zaire Trace</span>
         </div>
 
         {/* Form area */}
@@ -255,7 +255,7 @@ export default function LoginPage() {
             <p className="text-sm text-gray-500">
               {isRegister
                 ? "Completá tus datos para registrarte"
-                : "Ingresá a tu cuenta de SAS Trace"}
+                : "Ingresá a tu cuenta de Zaire Trace"}
             </p>
           </div>
 
@@ -454,7 +454,7 @@ export default function LoginPage() {
         {/* Footer con links legales */}
         <div className="px-8 xl:px-14 py-6 border-t border-gray-200">
           <p className="text-xs text-gray-400 text-center">
-            © 2026 SAS Supplier S.A. · ISO 9001:2015 ·{" "}
+            © 2026 Empresa Demo S.A. · ISO 9001:2015 ·{" "}
             <Link href="/terminos" className="hover:text-gray-600 underline underline-offset-2">
               Términos y Condiciones
             </Link>

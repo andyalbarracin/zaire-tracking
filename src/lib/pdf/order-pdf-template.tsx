@@ -1,56 +1,79 @@
-// order-pdf-template.tsx — src/lib/pdf/order-pdf-template.tsx — 2026-05-19
-// Template PDF de órdenes de trabajo con @react-pdf/renderer
+// order-pdf-template.tsx — src/lib/pdf/order-pdf-template.tsx
+// Template PDF RC 009-00 — Formulario de Orden de Trabajo
 
-import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { EMPRESA_INFO, ORDER_STATUS_LABELS } from "@/lib/constants";
+import { EMPRESA_INFO } from "@/lib/constants";
+import { BRANDING } from "@/lib/branding";
 import { formatCurrency } from "@/lib/utils";
-import type { OrderStatus, OrderType, Currency } from "@/lib/types/database";
+import type { Currency } from "@/lib/types/database";
 
-const styles = StyleSheet.create({
-  page: { fontFamily: "Helvetica", fontSize: 9, padding: 40, color: "#0F172A" },
-  header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20, paddingBottom: 12, borderBottomWidth: 2, borderBottomColor: "#0B2447" },
+const S = StyleSheet.create({
+  page: { fontFamily: "Helvetica", fontSize: 8, padding: 30, color: "#0F172A" },
+
+  // Header
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, paddingBottom: 8, borderBottomWidth: 2, borderBottomColor: "#0B2447" },
   headerLeft: { flex: 1 },
-  headerRight: { alignItems: "flex-end" },
-  companyName: { fontSize: 16, fontFamily: "Helvetica-Bold", color: "#0B2447", marginBottom: 2 },
-  companySubtitle: { fontSize: 8, color: "#576CBC" },
-  companyInfo: { fontSize: 7.5, color: "#64748B", marginTop: 1 },
-  orderTitle: { fontSize: 18, fontFamily: "Helvetica-Bold", color: "#0B2447" },
-  orderNumber: { fontSize: 11, fontFamily: "Helvetica-Bold", color: "#576CBC", marginTop: 2 },
-  infoBox: { flexDirection: "row", backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 4, padding: 10, marginBottom: 16, gap: 16 },
-  infoItem: { flex: 1 },
-  infoLabel: { fontSize: 7, color: "#64748B", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 },
-  infoValue: { fontSize: 9, fontFamily: "Helvetica-Bold" },
-  sectionTitle: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#0B2447", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, marginTop: 12 },
-  table: { borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 4, overflow: "hidden" },
-  tableHeader: { flexDirection: "row", backgroundColor: "#0B2447", padding: 6 },
-  tableRow: { flexDirection: "row", borderTopWidth: 1, borderTopColor: "#E2E8F0", padding: 6 },
+  headerRight: { alignItems: "flex-end", width: 120 },
+  companyName: { fontSize: 14, fontFamily: "Helvetica-Bold", color: "#0B2447", marginBottom: 2 },
+  companyInfo: { fontSize: 7, color: "#64748B", marginTop: 1 },
+  docCode: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#0B2447" },
+  docVigencia: { fontSize: 7, color: "#64748B", marginTop: 1 },
+
+  // Title row
+  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#0B2447", padding: "6 10", marginBottom: 8, borderRadius: 3 },
+  titleText: { fontSize: 12, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
+  otNumber: { fontSize: 12, fontFamily: "Helvetica-Bold", color: "#A5D7E8" },
+
+  // Info grid
+  infoGrid: { flexDirection: "row", gap: 6, marginBottom: 10 },
+  infoBox: { flex: 1, borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 3, padding: "5 7" },
+  infoLabel: { fontSize: 6.5, color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 },
+  infoValue: { fontSize: 8.5, fontFamily: "Helvetica-Bold", color: "#0F172A" },
+
+  // Table
+  tableWrap: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 3, overflow: "hidden", marginBottom: 8 },
+  tableHead: { flexDirection: "row", backgroundColor: "#0B2447", padding: "5 4" },
+  tableRow: { flexDirection: "row", borderTopWidth: 1, borderTopColor: "#E2E8F0", padding: "4 4" },
   tableRowAlt: { backgroundColor: "#F8FAFC" },
-  th: { color: "#FFFFFF", fontSize: 7.5, fontFamily: "Helvetica-Bold" },
-  td: { fontSize: 8 },
-  colNum: { width: 24 },
-  colQty: { width: 28 },
-  colDesc: { flex: 1 },
-  colSerie: { width: 70 },
-  colEquipo: { width: 50 },
-  colUnit: { width: 50, textAlign: "right" },
-  colTotal: { width: 55, textAlign: "right" },
-  totalsRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 8 },
-  totalsBox: { width: 180 },
-  totalsLine: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 3 },
-  totalLabel: { fontSize: 9, color: "#64748B" },
-  totalValue: { fontSize: 9 },
-  totalFinalLabel: { fontSize: 11, fontFamily: "Helvetica-Bold", color: "#0B2447" },
-  totalFinalValue: { fontSize: 11, fontFamily: "Helvetica-Bold", color: "#0B2447" },
-  totalFinalLine: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4, borderTopWidth: 1.5, borderTopColor: "#0B2447", marginTop: 2 },
-  notesBox: { backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 4, padding: 10, marginTop: 12 },
-  notesText: { fontSize: 8.5, color: "#64748B" },
-  signatureArea: { flexDirection: "row", gap: 20, marginTop: 24 },
-  signatureBox: { flex: 1, borderTopWidth: 1, borderTopColor: "#0B2447", paddingTop: 4 },
-  signatureLabel: { fontSize: 7.5, color: "#64748B", textAlign: "center" },
-  footer: { position: "absolute", bottom: 24, left: 40, right: 40, borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 6, flexDirection: "row", justifyContent: "space-between" },
-  footerText: { fontSize: 7, color: "#94A3B8" },
+  th: { color: "#FFFFFF", fontSize: 6.5, fontFamily: "Helvetica-Bold", textTransform: "uppercase" },
+  td: { fontSize: 7.5 },
+
+  // Column widths
+  cItem: { width: 20 },
+  cCant: { width: 22 },
+  cDesc: { flex: 1 },
+  cCodSas: { width: 48 },
+  cCodCliente: { width: 48 },
+  cOrigen: { width: 42 },
+  cFechaEnt: { width: 48 },
+  cUnitario: { width: 48, textAlign: "right" },
+  cTotal: { width: 52, textAlign: "right" },
+  cRtoFac: { width: 28, textAlign: "center" },
+
+  // Totals
+  totalsRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 8 },
+  totalsBox: { width: 160, borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 3, padding: "5 8" },
+  totalLine: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
+  totalLabel: { fontSize: 7.5, color: "#64748B" },
+  totalValue: { fontSize: 7.5 },
+  totalFinalLine: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1.5, borderTopColor: "#0B2447", marginTop: 3, paddingTop: 4 },
+  totalFinalLabel: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#0B2447" },
+  totalFinalValue: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#0B2447" },
+
+  // Footer control
+  footerControl: { flexDirection: "row", gap: 8, marginBottom: 6 },
+  checkBox: { flexDirection: "row", alignItems: "center", gap: 4, borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 3, padding: "4 7" },
+  checkLabel: { fontSize: 7.5, color: "#334155" },
+  checkMark: { fontSize: 9, fontFamily: "Helvetica-Bold" },
+  notesBox: { borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 3, padding: "5 8", marginBottom: 8 },
+  notesLabel: { fontSize: 6.5, color: "#94A3B8", textTransform: "uppercase", marginBottom: 3 },
+  notesText: { fontSize: 7.5, color: "#475569" },
+
+  // Page footer
+  pageFooter: { position: "absolute", bottom: 18, left: 30, right: 30, borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingTop: 4, flexDirection: "row", justifyContent: "space-between" },
+  footerText: { fontSize: 6.5, color: "#94A3B8" },
 });
 
 interface OrderPdfProps {
@@ -58,138 +81,157 @@ interface OrderPdfProps {
     order_number: string; order_type: string; status: string;
     date_in: string; date_due: string | null; currency: string;
     subtotal: number; total: number; general_notes: string | null; created_at: string;
-    clients: { business_name: string; tax_id: string | null; contact_name: string | null; email: string | null; phone: string | null; } | null;
+    clients: {
+      business_name: string; tax_id: string | null; contact_name: string | null;
+      email: string | null; phone: string | null; client_code?: string | null;
+    } | null;
   };
   items: Array<{
     item_number: number; quantity: number; custom_description: string | null;
     serial_number: string | null; equipment_number: string | null;
     additional_observation: string | null; unit_price: number; total_price: number;
+    is_remitted?: boolean; is_invoiced?: boolean;
+    origen_abastecimiento?: string | null;
     products: { code: string | null; name: string; brand: string | null; } | null;
   }>;
+}
+
+function fmtDate(d: string | null) {
+  if (!d) return "—";
+  return format(new Date(d), "dd/MM/yyyy", { locale: es });
 }
 
 export function OrderPdfDocument({ order, items }: OrderPdfProps) {
   const currency = order.currency as Currency;
   const isOTS = order.order_type === "OTS";
+  const allRemitted = items.length > 0 && items.every((i) => i.is_remitted);
+  const allInvoiced = items.length > 0 && items.every((i) => i.is_invoiced);
+  const today = format(new Date(), "dd/MM/yyyy", { locale: es });
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={S.page} orientation="landscape">
         {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.companyName}>{EMPRESA_INFO.nombre}</Text>
-            <Text style={styles.companySubtitle}>Sellos Mecánicos · Bombas · Equipos Industriales</Text>
-            <Text style={styles.companyInfo}>CUIT: {EMPRESA_INFO.cuit}</Text>
-            <Text style={styles.companyInfo}>{EMPRESA_INFO.direccion}</Text>
-            <Text style={styles.companyInfo}>{EMPRESA_INFO.telefono} · {EMPRESA_INFO.email}</Text>
+        <View style={S.header}>
+          <View style={S.headerLeft}>
+            <Text style={S.companyName}>{EMPRESA_INFO.nombre}</Text>
+            <Text style={S.companyInfo}>{EMPRESA_INFO.direccion} — {EMPRESA_INFO.ciudad}</Text>
+            <Text style={S.companyInfo}>{EMPRESA_INFO.telefono} · {EMPRESA_INFO.email}</Text>
+            <Text style={S.companyInfo}>CUIT: {EMPRESA_INFO.cuit}</Text>
           </View>
-          <View style={styles.headerRight}>
-            <Text style={styles.orderTitle}>
-              {isOTS ? "ORDEN DE TRABAJO DE SERVICIO" : "ORDEN DE TRABAJO"}
-            </Text>
-            <Text style={styles.orderNumber}>{order.order_number}</Text>
+          <View style={S.headerRight}>
+            <Text style={S.docCode}>RC 009-00</Text>
+            <Text style={S.docVigencia}>Vigencia: {today}</Text>
           </View>
         </View>
 
-        {/* Info box */}
-        <View style={styles.infoBox}>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Cliente</Text>
-            <Text style={styles.infoValue}>{order.clients?.business_name ?? "—"}</Text>
-            {order.clients?.tax_id && <Text style={styles.infoValue}>CUIT: {order.clients.tax_id}</Text>}
+        {/* Title row */}
+        <View style={S.titleRow}>
+          <Text style={S.titleText}>
+            {isOTS ? "ORDEN DE TRABAJO DE SERVICIO" : "ORDEN DE TRABAJO"}
+          </Text>
+          <Text style={S.otNumber}>OT N°: {order.order_number}</Text>
+        </View>
+
+        {/* Info grid */}
+        <View style={S.infoGrid}>
+          <View style={S.infoBox}>
+            <Text style={S.infoLabel}>Fecha</Text>
+            <Text style={S.infoValue}>{fmtDate(order.date_in)}</Text>
           </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Fecha Ingreso</Text>
-            <Text style={styles.infoValue}>{format(new Date(order.date_in), "dd/MM/yyyy", { locale: es })}</Text>
+          <View style={[S.infoBox, { flex: 2 }]}>
+            <Text style={S.infoLabel}>Cliente</Text>
+            <Text style={S.infoValue}>{order.clients?.business_name ?? "—"}</Text>
           </View>
-          {order.date_due && (
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Fecha Entrega Estimada</Text>
-              <Text style={styles.infoValue}>{format(new Date(order.date_due), "dd/MM/yyyy", { locale: es })}</Text>
-            </View>
-          )}
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Estado</Text>
-            <Text style={styles.infoValue}>{ORDER_STATUS_LABELS[order.status as OrderStatus]}</Text>
+          <View style={S.infoBox}>
+            <Text style={S.infoLabel}>OC N°</Text>
+            <Text style={S.infoValue}>—</Text>
           </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Moneda</Text>
-            <Text style={styles.infoValue}>{currency}</Text>
+          <View style={S.infoBox}>
+            <Text style={S.infoLabel}>Remito Salida N°</Text>
+            <Text style={S.infoValue}>—</Text>
+          </View>
+          <View style={S.infoBox}>
+            <Text style={S.infoLabel}>Moneda</Text>
+            <Text style={S.infoValue}>{currency} (sin IVA)</Text>
           </View>
         </View>
 
         {/* Items table */}
-        <Text style={styles.sectionTitle}>Ítems</Text>
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.th, styles.colNum]}>#</Text>
-            <Text style={[styles.th, styles.colQty]}>Cant.</Text>
-            <Text style={[styles.th, styles.colDesc]}>Descripción</Text>
-            <Text style={[styles.th, styles.colSerie]}>Nro. Serie</Text>
-            <Text style={[styles.th, styles.colEquipo]}>Equipo</Text>
-            <Text style={[styles.th, styles.colUnit]}>P. Unit.</Text>
-            <Text style={[styles.th, styles.colTotal]}>Total</Text>
+        <View style={S.tableWrap}>
+          <View style={S.tableHead}>
+            <Text style={[S.th, S.cItem]}>ITEM</Text>
+            <Text style={[S.th, S.cCant]}>CANT</Text>
+            <Text style={[S.th, S.cDesc]}>DESCRIPCION</Text>
+            <Text style={[S.th, S.cCodSas]}>COD. SAS</Text>
+            <Text style={[S.th, S.cCodCliente]}>COD. CLIENTE</Text>
+            <Text style={[S.th, S.cOrigen]}>PO/NP/STOCK</Text>
+            <Text style={[S.th, S.cFechaEnt]}>F. ENTREGA</Text>
+            <Text style={[S.th, S.cUnitario]}>$ UNIT.</Text>
+            <Text style={[S.th, S.cTotal]}>$ TOTAL</Text>
+            <Text style={[S.th, S.cRtoFac]}>RTO/FAC</Text>
           </View>
-          {items.map((item, i) => (
-            <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}>
-              <Text style={[styles.td, styles.colNum]}>{item.item_number}</Text>
-              <Text style={[styles.td, styles.colQty]}>{item.quantity}</Text>
-              <Text style={[styles.td, styles.colDesc]}>
-                {item.products?.name ?? item.custom_description ?? "—"}
-                {item.products?.brand ? `\n${item.products.brand}` : ""}
-                {item.additional_observation ? `\n${item.additional_observation}` : ""}
-              </Text>
-              <Text style={[styles.td, styles.colSerie]}>{item.serial_number ?? "—"}</Text>
-              <Text style={[styles.td, styles.colEquipo]}>{item.equipment_number ?? "—"}</Text>
-              <Text style={[styles.td, styles.colUnit]}>{formatCurrency(item.unit_price, currency)}</Text>
-              <Text style={[styles.td, styles.colTotal]}>{formatCurrency(item.total_price, currency)}</Text>
-            </View>
-          ))}
+          {items.map((item, i) => {
+            const rtoFac = item.is_remitted && item.is_invoiced ? "R/F"
+              : item.is_remitted ? "R"
+              : item.is_invoiced ? "F"
+              : "—";
+            return (
+              <View key={i} style={[S.tableRow, i % 2 === 1 ? S.tableRowAlt : {}]}>
+                <Text style={[S.td, S.cItem]}>{item.item_number}</Text>
+                <Text style={[S.td, S.cCant]}>{item.quantity}</Text>
+                <Text style={[S.td, S.cDesc]}>
+                  {item.products?.name ?? item.custom_description ?? "—"}
+                  {item.serial_number ? `\nSerie: ${item.serial_number}` : ""}
+                </Text>
+                <Text style={[S.td, S.cCodSas]}>{item.products?.code ?? "—"}</Text>
+                <Text style={[S.td, S.cCodCliente]}>{order.clients?.client_code ?? "—"}</Text>
+                <Text style={[S.td, S.cOrigen]}>{item.origen_abastecimiento ?? "—"}</Text>
+                <Text style={[S.td, S.cFechaEnt]}>{fmtDate(order.date_due)}</Text>
+                <Text style={[S.td, S.cUnitario]}>{formatCurrency(item.unit_price, currency)}</Text>
+                <Text style={[S.td, S.cTotal]}>{formatCurrency(item.total_price, currency)}</Text>
+                <Text style={[S.td, S.cRtoFac]}>{rtoFac}</Text>
+              </View>
+            );
+          })}
         </View>
 
-        {/* Totales */}
-        <View style={styles.totalsRow}>
-          <View style={styles.totalsBox}>
-            <View style={styles.totalsLine}>
-              <Text style={styles.totalLabel}>Subtotal</Text>
-              <Text style={styles.totalValue}>{formatCurrency(order.subtotal, currency)}</Text>
+        {/* Totals */}
+        <View style={S.totalsRow}>
+          <View style={S.totalsBox}>
+            <View style={S.totalLine}>
+              <Text style={S.totalLabel}>Subtotal</Text>
+              <Text style={S.totalValue}>{formatCurrency(order.subtotal, currency)}</Text>
             </View>
-            <View style={styles.totalFinalLine}>
-              <Text style={styles.totalFinalLabel}>TOTAL</Text>
-              <Text style={styles.totalFinalValue}>{formatCurrency(order.total, currency)}</Text>
+            <View style={S.totalFinalLine}>
+              <Text style={S.totalFinalLabel}>TOTAL</Text>
+              <Text style={S.totalFinalValue}>{formatCurrency(order.total, currency)}</Text>
             </View>
+          </View>
+        </View>
+
+        {/* Control general */}
+        <View style={S.footerControl}>
+          <View style={S.checkBox}>
+            <Text style={S.checkMark}>{allRemitted ? "✓" : "☐"}</Text>
+            <Text style={S.checkLabel}>TODO REMITIDO</Text>
+          </View>
+          <View style={S.checkBox}>
+            <Text style={S.checkMark}>{allInvoiced ? "✓" : "☐"}</Text>
+            <Text style={S.checkLabel}>TODO FACTURADO</Text>
           </View>
         </View>
 
         {/* Observaciones */}
-        {order.general_notes && (
-          <>
-            <Text style={styles.sectionTitle}>Observaciones</Text>
-            <View style={styles.notesBox}>
-              <Text style={styles.notesText}>{order.general_notes}</Text>
-            </View>
-          </>
-        )}
-
-        {/* Firma */}
-        <View style={styles.signatureArea}>
-          <View style={styles.signatureBox}>
-            <Text style={styles.signatureLabel}>Firma y aclaración — Cliente</Text>
-          </View>
-          <View style={styles.signatureBox}>
-            <Text style={styles.signatureLabel}>Firma y aclaración — SAS Supplier</Text>
-          </View>
+        <View style={S.notesBox}>
+          <Text style={S.notesLabel}>Observaciones</Text>
+          <Text style={S.notesText}>{order.general_notes ?? " "}</Text>
         </View>
 
-        {/* Footer */}
-        <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>
-            Sistema de Trazabilidad SAS Trace — ISO 9001:2015
-          </Text>
-          <Text style={styles.footerText}>
-            Generado el {format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}
-          </Text>
+        {/* Page footer */}
+        <View style={S.pageFooter} fixed>
+          <Text style={S.footerText}>Formulario RC009-00 — {BRANDING.systemName}</Text>
+          <Text style={S.footerText}>Generado el {format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}</Text>
         </View>
       </Page>
     </Document>

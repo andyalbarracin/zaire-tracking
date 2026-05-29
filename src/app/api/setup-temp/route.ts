@@ -14,15 +14,15 @@ export async function GET() {
   const users = [
     {
       id: "a0000000-0000-0000-0000-000000000001",
-      email: "admin@sastrace.com",
-      password: "SasTrace2026!",
-      fullName: "Andrés Rodríguez",
+      email: "admin@demo.com",
+      password: "Demo2026!",
+      fullName: "Admin Demo",
     },
     {
       id: "a0000000-0000-0000-0000-000000000002",
-      email: "operador@sastrace.com",
-      password: "SasTrace2026!",
-      fullName: "Leo Martínez",
+      email: "operador@demo.com",
+      password: "Demo2026!",
+      fullName: "Operador Demo",
     },
   ];
 

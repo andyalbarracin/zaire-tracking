@@ -1,4 +1,4 @@
-// page.tsx — src/app/(dashboard)/ordenes/page.tsx — 2026-05-19
+// page.tsx — src/app/(dashboard)/ordenes/page.tsx — 2026-05-27
 // Lista principal de órdenes de trabajo con TanStack Table y filtros
 
 import { createClient } from "@/lib/supabase/server";
@@ -14,9 +14,9 @@ export default async function OrdenesPage() {
       .from("work_orders")
       .select(`
         id, order_number, order_type, status, date_in, date_due,
-        currency, subtotal, total, is_remitted, is_delivered, is_invoiced,
-        general_notes, created_at,
-        clients(id, business_name)
+        currency, subtotal, total, branch_id, general_notes, created_at,
+        clients(id, business_name),
+        work_order_items(is_quoted, is_remitted, is_delivered, is_invoiced, status, serial_number, custom_description, origen_abastecimiento, total_price_ars)
       `)
       .is("deleted_at", null)
       .order("created_at", { ascending: false }),
@@ -35,7 +35,8 @@ export default async function OrdenesPage() {
           {orders?.length ?? 0} órdenes registradas
         </p>
       </div>
-      <OrdersTable initialOrders={orders ?? []} clients={clients ?? []} />
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <OrdersTable initialOrders={(orders ?? []) as any} clients={clients ?? []} />
     </div>
   );
 }

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="50%" style="stop-color:#1a2744"/>
+      <stop offset="100%" style="stop-color:#0c2340"/>
+    </linearGradient>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#1e3a5f" stroke-width="0.5" opacity="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="1440" height="900" fill="url(#bg)"/>
+  <rect width="1440" height="900" fill="url(#grid)"/>
+  <circle cx="200" cy="150" r="180" fill="#60a5fa" opacity="0.03"/>
+  <circle cx="1200" cy="700" r="250" fill="#3b82f6" opacity="0.04"/>
+  <circle cx="900" cy="200" r="120" fill="#60a5fa" opacity="0.03"/>
+  <text x="720" y="880" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="rgba(255,255,255,0.15)" letter-spacing="4">SAS TRACE — SISTEMA DE TRAZABILIDAD INDUSTRIAL</text>
+</svg>

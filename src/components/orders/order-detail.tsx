@@ -1,13 +1,13 @@
 "use client";
-// order-detail.tsx — src/components/orders/order-detail.tsx — 2026-05-19
-// Vista completa del detalle de una OT: header, info, ítems, historial, cambio estado
+// order-detail.tsx — src/components/orders/order-detail.tsx — 2026-05-27
+// Vista completa del detalle de una OT: header, info, ítems, historial, cambio de estado
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Pencil, FileDown, CheckCircle2, Circle, ArrowRight,
+  ArrowLeft, Pencil, FileDown, ArrowRight,
   ChevronDown, ChevronUp, Loader2, Building2, Phone, Mail
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -17,27 +17,62 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrderStatusBadge, OrderTypeBadge } from "./order-status-badge";
-import { formatDate, formatDateTime, formatCurrency, cn } from "@/lib/utils";
-import { ORDER_STATUS_LABELS, ORDER_STATUS_NEXT, PRODUCT_CATEGORY_LABELS } from "@/lib/constants";
-import type { OrderStatus, OrderType, Currency, Profile, Client, Product, ProductCategory } from "@/lib/types/database";
+import { ItemStatusChecklist } from "./item-status-checklist";
+import { StatusDot } from "@/components/shared/status-dot";
+import { formatDate, formatDateTime, formatCurrency, cn, calculateTrafficLight } from "@/lib/utils";
+import { ORDER_STATUS_LABELS, ORDER_STATUS_NEXT, BRANCHES } from "@/lib/constants";
+import type { OrderStatus, OrderType, Currency, Profile, Client, Product } from "@/lib/types/database";
+
+interface ItemDetail {
+  id: string;
+  item_number: number;
+  quantity: number;
+  product_id: string | null;
+  custom_description: string | null;
+  serial_number: string | null;
+  equipment_number: string | null;
+  additional_observation: string | null;
+  unit_price: number;
+  total_price: number;
+  unit_price_ars: number;
+  total_price_ars: number;
+  repair_required: boolean;
+  diagnosis: string | null;
+  work_performed: string | null;
+  status: string;
+  notes: string | null;
+  // Campos técnicos
+  medida: string | null;
+  unidad_medida: string | null;
+  marca: string | null;
+  materiales_caras: string | null;
+  materiales_orings: string | null;
+  origen_abastecimiento: string | null;
+  // Estados por ítem
+  is_quoted: boolean;
+  is_remitted: boolean;
+  qty_remitted: number;
+  is_delivered: boolean;
+  qty_delivered: number;
+  is_invoiced: boolean;
+  qty_invoiced: number;
+  products: { id: string; code: string | null; name: string; brand: string | null; category: string | null; } | null;
+}
 
 interface OrderDetailProps {
   order: {
     id: string; order_number: string; order_type: string; status: string;
     date_in: string; date_due: string | null; currency: string;
-    subtotal: number; total: number; is_remitted: boolean; is_delivered: boolean;
-    is_invoiced: boolean; general_notes: string | null; created_at: string; updated_at: string;
+    subtotal: number; total: number; branch_id: string | null;
+    general_notes: string | null; created_at: string; updated_at: string;
     client_id: string | null;
-    clients: { id: string; business_name: string; tax_id: string | null; contact_name: string | null; email: string | null; phone: string | null; city: string | null; } | null;
+    clients: {
+      id: string; business_name: string; tax_id: string | null;
+      contact_name: string | null; email: string | null; phone: string | null;
+      city: string | null; client_code?: string | null;
+    } | null;
   };
-  items: Array<{
-    id: string; item_number: number; quantity: number; product_id: string | null;
-    custom_description: string | null; serial_number: string | null;
-    equipment_number: string | null; additional_observation: string | null;
-    unit_price: number; total_price: number; repair_required: boolean;
-    diagnosis: string | null; work_performed: string | null; status: string; notes: string | null;
-    products: { id: string; code: string | null; name: string; brand: string | null; category: string | null; } | null;
-  }>;
+  items: ItemDetail[];
   history: Array<{
     id: string; old_status: string | null; new_status: string;
     notes: string | null; created_at: string;
@@ -48,19 +83,21 @@ interface OrderDetailProps {
   currentProfile: Pick<Profile, "id" | "role" | "full_name"> | null;
 }
 
-export function OrderDetail({ order, items, history, currentProfile }: OrderDetailProps) {
+export function OrderDetail({ order, items: initialItems, history, currentProfile }: OrderDetailProps) {
+  const totalArs = initialItems.reduce((sum, i) => sum + (i.total_price_ars ?? 0), 0);
   const router = useRouter();
   const [currentStatus, setCurrentStatus] = useState(order.status as OrderStatus);
   const [newStatus, setNewStatus] = useState<OrderStatus | "">("");
   const [statusNotes, setStatusNotes] = useState("");
   const [changingStatus, setChangingStatus] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [isRemitted, setIsRemitted] = useState(order.is_remitted);
-  const [isDelivered, setIsDelivered] = useState(order.is_delivered);
-  const [isInvoiced, setIsInvoiced] = useState(order.is_invoiced);
+  const [localItems, setLocalItems] = useState<ItemDetail[]>(initialItems);
 
   const allowedNext = ORDER_STATUS_NEXT[currentStatus] ?? [];
   const currency = order.currency as Currency;
+  const branch = BRANCHES.find((b) => b.id === order.branch_id);
+
+  const isTerminal = ["facturada", "cancelada"].includes(currentStatus);
 
   async function handleStatusChange() {
     if (!newStatus) return;
@@ -91,15 +128,26 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
     setChangingStatus(false);
   }
 
-  async function toggleFlag(flag: "is_remitted" | "is_delivered" | "is_invoiced", value: boolean) {
+  async function toggleItemFlag(
+    itemId: string,
+    flag: "is_quoted" | "is_remitted" | "is_delivered" | "is_invoiced",
+    value: boolean
+  ) {
     const supabase = createClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from("work_orders").update({ [flag]: value }).eq("id", order.id);
-    if (error) { toast.error("Error al actualizar"); return; }
-    if (flag === "is_remitted") setIsRemitted(value);
-    if (flag === "is_delivered") setIsDelivered(value);
-    if (flag === "is_invoiced") setIsInvoiced(value);
+    const { error } = await (supabase as any).from("work_order_items").update({ [flag]: value }).eq("id", itemId);
+    if (error) { toast.error("Error al actualizar el ítem"); return; }
+    setLocalItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, [flag]: value } : i)));
     toast.success("Actualizado");
+  }
+
+  async function updateItemStatus(itemId: string, newStatus: string) {
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("work_order_items").update({ status: newStatus }).eq("id", itemId);
+    if (error) { toast.error("Error al actualizar el estado"); return; }
+    setLocalItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, status: newStatus } : i)));
+    toast.success("Estado actualizado");
   }
 
   function toggleItemExpand(id: string) {
@@ -110,8 +158,6 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
       return next;
     });
   }
-
-  const isTerminal = ["cerrada", "cancelada"].includes(currentStatus);
 
   return (
     <div className="space-y-6">
@@ -125,6 +171,11 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
             <h1 className="text-2xl font-bold font-mono text-(--sas-text)">{order.order_number}</h1>
             <OrderTypeBadge type={order.order_type as OrderType} />
             <OrderStatusBadge status={currentStatus} />
+            {branch && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                {branch.code}
+              </span>
+            )}
           </div>
           {order.clients && (
             <p className="text-sm text-(--sas-text-muted) mt-1">
@@ -145,13 +196,20 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
               <FileDown className="w-3.5 h-3.5 mr-1.5" /> PDF
             </a>
           </Button>
+          {order.order_type === "OTS" && initialItems.some((i) => i.repair_required) && (
+            <Button asChild variant="outline" size="sm">
+              <a href={`/api/pdf/repair/${order.id}`} target="_blank" rel="noopener noreferrer">
+                <FileDown className="w-3.5 h-3.5 mr-1.5" /> Planilla Reparación
+              </a>
+            </Button>
+          )}
         </div>
       </div>
 
       <Tabs defaultValue="detalle">
         <TabsList className="bg-white border border-(--sas-border)">
           <TabsTrigger value="detalle">Detalle</TabsTrigger>
-          <TabsTrigger value="items">Ítems ({items.length})</TabsTrigger>
+          <TabsTrigger value="items">Ítems ({localItems.length})</TabsTrigger>
           <TabsTrigger value="historial">Historial ({history.length})</TabsTrigger>
           {!isTerminal && <TabsTrigger value="estado">Cambiar Estado</TabsTrigger>}
         </TabsList>
@@ -159,6 +217,7 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
         {/* Tab: Detalle */}
         <TabsContent value="detalle" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Información de la orden */}
             <div className="sas-card p-5 space-y-4">
               <h3 className="font-semibold text-(--sas-text)">Información de la orden</h3>
               <div className="space-y-3 text-sm">
@@ -170,6 +229,12 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
                   <span className="text-(--sas-text-muted)">Tipo</span>
                   <OrderTypeBadge type={order.order_type as OrderType} />
                 </div>
+                {branch && (
+                  <div className="flex justify-between">
+                    <span className="text-(--sas-text-muted)">Sucursal</span>
+                    <span className="font-medium">{branch.name}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-(--sas-text-muted)">Ingreso</span>
                   <span>{formatDate(order.date_in)}</span>
@@ -182,13 +247,22 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
                   <span className="text-(--sas-text-muted)">Moneda</span>
                   <span className="font-medium">{currency}</span>
                 </div>
-                <div className="flex justify-between text-base font-bold border-t border-(--sas-border) pt-3">
-                  <span>Total</span>
-                  <span>{formatCurrency(order.total, currency)}</span>
+                <div className="border-t border-(--sas-border) pt-3 space-y-1">
+                  <div className="flex justify-between text-base font-bold">
+                    <span>Total USD</span>
+                    <span className="text-blue-700">{formatCurrency(order.total, "USD")}</span>
+                  </div>
+                  {totalArs > 0 && (
+                    <div className="flex justify-between text-sm font-medium text-emerald-700">
+                      <span>Total ARS</span>
+                      <span>{formatCurrency(totalArs, "ARS")}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
+            {/* Cliente */}
             {order.clients && (
               <div className="sas-card p-5 space-y-3">
                 <h3 className="font-semibold text-(--sas-text)">Cliente</h3>
@@ -196,6 +270,9 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
                   <Link href={`/clientes/${order.clients.id}`} className="font-medium text-sas-blue hover:underline block">
                     {order.clients.business_name}
                   </Link>
+                  {order.clients.client_code && (
+                    <p className="text-xs text-(--sas-text-muted) font-mono">Cód: {order.clients.client_code}</p>
+                  )}
                   {order.clients.tax_id && (
                     <p className="font-mono text-xs text-(--sas-text-muted)">CUIT: {order.clients.tax_id}</p>
                   )}
@@ -221,32 +298,40 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
               </div>
             )}
 
+            {/* Estado Operativo — semáforo calculado desde ítems */}
             <div className="sas-card p-5 space-y-4">
-              <h3 className="font-semibold text-(--sas-text)">Estado operativo</h3>
+              <h3 className="font-semibold text-(--sas-text)">Estado Operativo</h3>
               <div className="space-y-3">
-                {([
-                  { flag: "is_remitted" as const, label: "Remitado", value: isRemitted },
-                  { flag: "is_delivered" as const, label: "Entregado", value: isDelivered },
-                  { flag: "is_invoiced" as const, label: "Facturado", value: isInvoiced },
-                ] as const).map(({ flag, label, value }) => (
-                  <button
-                    key={flag}
-                    type="button"
-                    onClick={() => toggleFlag(flag, !value)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all",
-                      value
-                        ? "border-green-400 bg-green-50 text-green-700"
-                        : "border-(--sas-border) text-(--sas-text-muted) hover:border-slate-300"
-                    )}
-                  >
-                    {value
-                      ? <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      : <Circle className="w-4 h-4" />
+                <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-(--sas-border)">
+                  <span className="text-sm text-(--sas-text-muted)">Procesado</span>
+                  <StatusDot
+                    status={
+                      localItems.every((i) => ["completado", "entregado"].includes(i.status))
+                        ? "green"
+                        : localItems.some((i) => ["completado", "entregado", "en_proceso"].includes(i.status))
+                        ? "yellow"
+                        : "red"
                     }
-                    {label}
-                  </button>
-                ))}
+                    label={`${localItems.filter((i) => ["completado", "entregado"].includes(i.status)).length}/${localItems.length}`}
+                  />
+                </div>
+                {([
+                  { field: "is_quoted" as const, label: "Cotizado" },
+                  { field: "is_remitted" as const, label: "Remitido" },
+                  { field: "is_delivered" as const, label: "Entregado" },
+                  { field: "is_invoiced" as const, label: "Facturado" },
+                ] as const).map(({ field, label }) => {
+                  const completed = localItems.filter((i) => i[field] === true).length;
+                  return (
+                    <div key={field} className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-(--sas-border)">
+                      <span className="text-sm text-(--sas-text-muted)">{label}</span>
+                      <StatusDot
+                        status={calculateTrafficLight(localItems, field)}
+                        label={`${completed}/${localItems.length}`}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -261,9 +346,9 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
 
         {/* Tab: Ítems */}
         <TabsContent value="items" className="space-y-3">
-          {items.map((item) => {
+          {localItems.map((item) => {
             const expanded = expandedItems.has(item.id);
-            const hasDetails = item.diagnosis || item.work_performed || item.notes;
+            const hasTechDetails = item.medida || item.marca || item.materiales_caras || item.materiales_orings || item.origen_abastecimiento || item.diagnosis || item.work_performed || item.notes;
             return (
               <div key={item.id} className="sas-card overflow-hidden">
                 <div className="flex items-start gap-4 p-4">
@@ -281,31 +366,70 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
                         )}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-medium">{formatCurrency(item.total_price, currency)}</p>
-                        <p className="text-xs text-(--sas-text-muted)">{item.quantity} × {formatCurrency(item.unit_price, currency)}</p>
+                        <p className="text-sm font-medium text-blue-700">{formatCurrency(item.total_price, "USD")}</p>
+                        {item.total_price_ars > 0 && (
+                          <p className="text-sm font-medium text-emerald-700">{formatCurrency(item.total_price_ars, "ARS")}</p>
+                        )}
+                        <p className="text-xs text-(--sas-text-muted)">{item.quantity} × {formatCurrency(item.unit_price, "USD")}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 mt-2 flex-wrap text-xs text-(--sas-text-muted)">
                       {item.serial_number && <span>Serie: <span className="font-mono">{item.serial_number}</span></span>}
                       {item.equipment_number && <span>Equipo: <span className="font-mono">{item.equipment_number}</span></span>}
+                      {item.medida && <span>Medida: <span className="font-mono">{item.medida}{item.unidad_medida ? ` ${item.unidad_medida}` : ""}</span></span>}
+                      {item.marca && <span>Marca: <span className="font-medium">{item.marca}</span></span>}
                       {item.repair_required && (
                         <span className="text-amber-600 font-medium">⚠ Requiere reparación</span>
                       )}
-                      {item.additional_observation && <span className="italic">{item.additional_observation}</span>}
+                    </div>
+                    {/* Semáforo de estado del ítem */}
+                    <div className="flex items-center gap-3 mt-2 flex-wrap">
+                      <StatusDot status={item.is_quoted ? "green" : "red"} label="Cotizado" size="sm" />
+                      <StatusDot status={item.is_remitted ? "green" : "red"} label="Remitido" size="sm" />
+                      <StatusDot status={item.is_delivered ? "green" : "red"} label="Entregado" size="sm" />
+                      <StatusDot status={item.is_invoiced ? "green" : "red"} label="Facturado" size="sm" />
                     </div>
                   </div>
-                  {hasDetails && (
-                    <button
-                      type="button"
-                      onClick={() => toggleItemExpand(item.id)}
-                      className="text-(--sas-text-muted) hover:text-(--sas-text) transition-colors shrink-0"
-                    >
-                      {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => toggleItemExpand(item.id)}
+                    className="text-(--sas-text-muted) hover:text-(--sas-text) transition-colors shrink-0"
+                  >
+                    {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
                 </div>
-                {expanded && hasDetails && (
-                  <div className="border-t border-(--sas-border) px-4 pb-4 pt-3 space-y-3 bg-slate-50">
+
+                {expanded && (
+                  <div className="border-t border-(--sas-border) px-4 pb-4 pt-3 space-y-4 bg-slate-50">
+                    {/* Campos técnicos */}
+                    {(item.materiales_caras || item.materiales_orings || item.origen_abastecimiento) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        {item.materiales_caras && (
+                          <div>
+                            <p className="text-xs font-semibold text-(--sas-text-muted) uppercase mb-1">Mat. Caras</p>
+                            <p className="text-(--sas-text)">{item.materiales_caras}</p>
+                          </div>
+                        )}
+                        {item.materiales_orings && (
+                          <div>
+                            <p className="text-xs font-semibold text-(--sas-text-muted) uppercase mb-1">Mat. O&apos;rings</p>
+                            <p className="text-(--sas-text)">{item.materiales_orings}</p>
+                          </div>
+                        )}
+                        {item.origen_abastecimiento && (
+                          <div>
+                            <p className="text-xs font-semibold text-(--sas-text-muted) uppercase mb-1">Origen</p>
+                            <p className="text-(--sas-text)">{item.origen_abastecimiento}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {item.additional_observation && (
+                      <div>
+                        <p className="text-xs font-semibold text-(--sas-text-muted) uppercase mb-1">Observación</p>
+                        <p className="text-sm text-(--sas-text) italic">{item.additional_observation}</p>
+                      </div>
+                    )}
                     {item.diagnosis && (
                       <div>
                         <p className="text-xs font-semibold text-(--sas-text-muted) uppercase mb-1">Diagnóstico</p>
@@ -324,21 +448,68 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
                         <p className="text-sm text-(--sas-text)">{item.notes}</p>
                       </div>
                     )}
+                    {/* Estado de trabajo del ítem */}
+                    <div className="border-t border-(--sas-border) pt-3 space-y-2">
+                      <p className="text-xs font-semibold text-(--sas-text-muted) uppercase tracking-wide">Estado de trabajo</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {(["pendiente", "en_proceso", "completado", "entregado"] as const).map((s) => {
+                          const labels: Record<string, string> = {
+                            pendiente: "Pendiente",
+                            en_proceso: "En Proceso",
+                            completado: "Completado",
+                            entregado: "Entregado",
+                          };
+                          const active = item.status === s;
+                          return (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => updateItemStatus(item.id, s)}
+                              className={cn(
+                                "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                                active
+                                  ? "bg-sas-navy text-white border-sas-navy"
+                                  : "bg-white text-(--sas-text-muted) border-(--sas-border) hover:border-sas-navy-mid hover:text-(--sas-text)"
+                              )}
+                            >
+                              {active && "✓ "}{labels[s]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Checklist vertical de estado */}
+                    <div className="border-t border-(--sas-border) pt-3">
+                      <ItemStatusChecklist
+                        values={item}
+                        quantity={item.quantity}
+                        onToggle={(flag, newValue) => toggleItemFlag(item.id, flag, newValue)}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
             );
           })}
-          {!items.length && (
+          {!localItems.length && (
             <div className="sas-card p-10 text-center text-(--sas-text-muted) text-sm">
               Sin ítems registrados
             </div>
           )}
           {/* Totales */}
           <div className="sas-card p-4 flex justify-end">
-            <div className="text-right">
-              <p className="text-sm text-(--sas-text-muted)">Total de la orden</p>
-              <p className="text-2xl font-bold text-(--sas-text)">{formatCurrency(order.total, currency)}</p>
+            <div className="text-right space-y-1">
+              <div>
+                <p className="text-xs text-(--sas-text-muted) uppercase tracking-wide">Total USD</p>
+                <p className="text-2xl font-bold text-blue-700">{formatCurrency(order.total, "USD")}</p>
+              </div>
+              {totalArs > 0 && (
+                <div>
+                  <p className="text-xs text-(--sas-text-muted) uppercase tracking-wide">Total ARS</p>
+                  <p className="text-xl font-bold text-emerald-700">{formatCurrency(totalArs, "ARS")}</p>
+                </div>
+              )}
             </div>
           </div>
         </TabsContent>
@@ -371,7 +542,7 @@ export function OrderDetail({ order, items, history, currentProfile }: OrderDeta
                           <OrderStatusBadge status={entry.new_status as OrderStatus} />
                         </div>
                         {entry.notes && (
-                          <p className="text-sm text-(--sas-text) mt-1.5 italic">"{entry.notes}"</p>
+                          <p className="text-sm text-(--sas-text) mt-1.5 italic">&quot;{entry.notes}&quot;</p>
                         )}
                         <p className="text-xs text-(--sas-text-muted) mt-1">
                           {entry.profiles?.full_name ?? "Sistema"} · {formatDateTime(entry.created_at)}
